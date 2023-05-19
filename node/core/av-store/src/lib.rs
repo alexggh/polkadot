@@ -614,7 +614,17 @@ async fn run_iteration<Context>(
 			*next_pruning = Delay::new(subsystem.pruning_config.pruning_interval).fuse();
 
 			let _timer = subsystem.metrics.time_pruning();
-			prune_all(&subsystem.db, &subsystem.config, &*subsystem.clock)?;
+
+			let db = subsystem.db.clone();
+			let config = subsystem.config.clone();
+			let time_now = subsystem.clock.now()?;
+			ctx.spawn_blocking("av-store-prunning", Box::pin(async move {
+				// TODO: When prune all was throwing fatal errors the main loop is exiting
+				// so, so we should achieve the same here.
+				if let Err(err) = prune_all(&db, &config, time_now) {
+					err.trace();
+				}
+			}))?;
 		}
 	}
 
@@ -1250,8 +1260,7 @@ fn store_available_data(
 	Ok(())
 }
 
-fn prune_all(db: &Arc<dyn Database>, config: &Config, clock: &dyn Clock) -> Result<(), Error> {
-	let now = clock.now()?;
+fn prune_all(db: &Arc<dyn Database>, config: &Config, now: Duration) -> Result<(), Error> {
 	let (range_start, range_end) = pruning_range(now);
 
 	let mut tx = DBTransaction::new();
