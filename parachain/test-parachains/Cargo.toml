@@ -4,6 +4,7 @@ description = "Integration tests using the test-parachains"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+license.workspace = true
 publish = false
 
 [dependencies]
@@ -14,7 +15,7 @@ adder = { package = "test-parachain-adder", path = "adder" }
 halt = { package = "test-parachain-halt", path = "halt" }
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "master" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
 
 [features]
 default = ["std"]

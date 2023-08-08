@@ -3,11 +3,12 @@ name = "polkadot-core-primitives"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "revert-libp2p-0.52" }
+sp-std = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "revert-libp2p-0.52" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "revert-libp2p-0.52" }
 scale-info = { version = "2.5.0", default-features = false, features = ["derive"] }
 parity-scale-codec = { version = "3.6.1", default-features = false, features = [ "derive" ] }
 

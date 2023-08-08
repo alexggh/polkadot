@@ -4,6 +4,7 @@ description = "Polkadot Relay-chain Client Node"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [package.metadata.wasm-pack.profile.release]
 # `wasm-opt` has some problems on Linux, see
@@ -22,26 +23,24 @@ pyro = { package = "pyroscope", version = "0.5.3", optional = true }
 pyroscope_pprofrs = { version = "0.2", optional = true }
 
 service = { package = "polkadot-service", path = "../node/service", default-features = false, optional = true }
-polkadot-node-core-pvf-execute-worker = { path = "../node/core/pvf/execute-worker", optional = true }
-polkadot-node-core-pvf-prepare-worker = { path = "../node/core/pvf/prepare-worker", optional = true }
 polkadot-performance-test = { path = "../node/test/performance-test", optional = true }
 
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-maybe-compressed-blob = { git = "https://github.com/paritytech/substrate", branch = "master" }
-frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "master", optional = true }
-try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "master", optional = true }
-sc-cli = { git = "https://github.com/paritytech/substrate", branch = "master", optional = true }
-sc-service = { git = "https://github.com/paritytech/substrate", branch = "master", optional = true }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sp-maybe-compressed-blob = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", optional = true , branch = "revert-libp2p-0.52" }
+try-runtime-cli = { git = "https://github.com/paritytech/substrate", optional = true , branch = "revert-libp2p-0.52" }
+sc-cli = { git = "https://github.com/paritytech/substrate", optional = true , branch = "revert-libp2p-0.52" }
+sc-service = { git = "https://github.com/paritytech/substrate", optional = true , branch = "revert-libp2p-0.52" }
 polkadot-node-metrics = { path = "../node/metrics" }
-sc-tracing = { git = "https://github.com/paritytech/substrate", branch = "master", optional = true }
-sc-sysinfo = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sc-executor = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sc-storage-monitor = { git = "https://github.com/paritytech/substrate", branch = "master" }
+sc-tracing = { git = "https://github.com/paritytech/substrate", optional = true , branch = "revert-libp2p-0.52" }
+sc-sysinfo = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sc-executor = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sc-storage-monitor = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
 
 [build-dependencies]
-substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "master" }
+substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
 
 [features]
 default = ["db", "cli", "full-node"]
@@ -53,8 +52,6 @@ cli = [
 	"sc-tracing",
 	"frame-benchmarking-cli",
 	"try-runtime-cli",
-	"polkadot-node-core-pvf-execute-worker",
-	"polkadot-node-core-pvf-prepare-worker",
 	"service",
 ]
 runtime-benchmarks = [

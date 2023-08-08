@@ -4,6 +4,7 @@ description = "Examples of xcm-simulator usage."
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.6.1" }
@@ -11,14 +12,14 @@ honggfuzz = "0.5.55"
 arbitrary = "1.2.0"
 scale-info = { version = "2.5.0", features = ["derive"] }
 
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "master" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "master" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "master" }
-pallet-message-queue = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "master" }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+pallet-message-queue = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
 
 xcm = { path = "../../" }
 xcm-simulator = { path = "../" }

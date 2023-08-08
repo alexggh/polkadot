@@ -3,6 +3,7 @@ name = "polkadot-performance-test"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 thiserror = "1.0.31"
@@ -15,8 +16,8 @@ polkadot-erasure-coding = { path = "../../../erasure-coding" }
 polkadot-node-primitives = { path = "../../primitives" }
 polkadot-primitives = { path = "../../../primitives" }
 
-sc-executor-common = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-maybe-compressed-blob = { git = "https://github.com/paritytech/substrate", branch = "master" }
+sc-executor-common = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sp-maybe-compressed-blob = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
 
 kusama-runtime = { path = "../../../runtime/kusama" }
 

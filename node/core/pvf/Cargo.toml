@@ -3,6 +3,7 @@ name = "polkadot-node-core-pvf"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [[bin]]
 name = "puppet_worker"
@@ -31,13 +32,13 @@ polkadot-node-metrics = { path = "../../metrics" }
 polkadot-node-primitives = { path = "../../primitives" }
 polkadot-primitives = { path = "../../../primitives" }
 
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-wasm-interface = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-maybe-compressed-blob = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-tracing = { git = "https://github.com/paritytech/substrate", branch = "master" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sp-wasm-interface = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sp-maybe-compressed-blob = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
+sp-tracing = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
 
 [build-dependencies]
-substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "master" }
+substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "revert-libp2p-0.52" }
 
 [dev-dependencies]
 assert_matches = "1.4.0"
