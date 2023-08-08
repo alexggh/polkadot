@@ -3338,12 +3338,12 @@ async fn get_approval_voting_params_or_default<Context>(
 	match s_rx.await {
 		Ok(Ok(s)) => s,
 		_ => {
-			gum::error!(
+			gum::debug!(
 				target: LOG_TARGET,
 				"Could not request approval voting params from runtime using defaults"
 			);
 			ApprovalVotingParams {
-				max_approval_coalesce_count: 1,
+				max_approval_coalesce_count: 6,
 				max_approval_coalesce_wait_ticks: 2,
 			}
 		},
