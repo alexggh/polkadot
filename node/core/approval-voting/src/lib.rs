@@ -3368,30 +3368,32 @@ fn issue_local_invalid_statement<Sender>(
 
 #[overseer::contextbounds(ApprovalVoting, prefix = self::overseer)]
 async fn get_approval_voting_params_or_default<Context>(
-	ctx: &mut Context,
-	block_hash: Hash,
+	_ctx: &mut Context,
+	_block_hash: Hash,
 ) -> ApprovalVotingParams {
-	let (s_tx, s_rx) = oneshot::channel();
+	// let (s_tx, s_rx) = oneshot::channel();
 
-	ctx.send_message(RuntimeApiMessage::Request(
-		block_hash,
-		RuntimeApiRequest::ApprovalVotingParams(s_tx),
-	))
-	.await;
+	// ctx.send_message(RuntimeApiMessage::Request(
+	// 	block_hash,
+	// 	RuntimeApiRequest::ApprovalVotingParams(s_tx),
+	// ))
+	// .await;
 
-	match s_rx.await {
-		Ok(Ok(s)) => s,
-		_ => {
-			gum::debug!(
-				target: LOG_TARGET,
-				"Could not request approval voting params from runtime using defaults"
-			);
-			ApprovalVotingParams {
-				max_approval_coalesce_count: 6,
-				max_approval_coalesce_wait_ticks: 2,
-			}
-		},
-	}
+	// match s_rx.await {
+	// 	Ok(Ok(s)) => s,
+	// 	_ => {
+	// 		gum::debug!(
+	// 			target: LOG_TARGET,
+	// 			"Could not request approval voting params from runtime using defaults"
+	// 		);
+	// 		ApprovalVotingParams {
+	// 			max_approval_coalesce_count: 6,
+	// 			max_approval_coalesce_wait_ticks: 2,
+	// 		}
+	// 	},
+	// }
+
+	ApprovalVotingParams { max_approval_coalesce_count: 1, max_approval_coalesce_wait_ticks: 2 }
 }
 
 fn compute_delayed_approval_sending_tick(
