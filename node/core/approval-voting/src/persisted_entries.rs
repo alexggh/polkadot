@@ -76,6 +76,39 @@ impl From<TrancheEntry> for crate::approval_db::v2::TrancheEntry {
 	}
 }
 
+impl From<crate::approval_db::v2::OurApproval> for OurApproval {
+	fn from(approval: crate::approval_db::v2::OurApproval) -> Self {
+		Self {
+			signature: approval.signature,
+			signed_candidates_indices: approval.signed_candidates_indices,
+		}
+	}
+}
+impl From<OurApproval> for crate::approval_db::v2::OurApproval {
+	fn from(approval: OurApproval) -> Self {
+		Self {
+			signature: approval.signature,
+			signed_candidates_indices: approval.signed_candidates_indices,
+		}
+	}
+}
+
+impl From<ValidatorSignature> for OurApproval {
+	fn from(value: ValidatorSignature) -> Self {
+		Self { signature: value, signed_candidates_indices: Default::default() }
+	}
+}
+
+/// Metadata about our approval signature
+#[derive(Debug, Clone, PartialEq)]
+pub struct OurApproval {
+	/// The
+	pub signature: ValidatorSignature,
+	/// The indices of the candidates signed in this approval, an empty value means only
+	/// the candidate referred by this approval entry was signed.
+	pub signed_candidates_indices: Option<CandidateBitfield>,
+}
+
 /// Metadata regarding approval of a particular candidate within the context of some
 /// particular block.
 #[derive(Debug, Clone, PartialEq)]
@@ -83,7 +116,7 @@ pub struct ApprovalEntry {
 	tranches: Vec<TrancheEntry>,
 	backing_group: GroupIndex,
 	our_assignment: Option<OurAssignment>,
-	our_approval_sig: Option<ValidatorSignature>,
+	our_approval_sig: Option<OurApproval>,
 	// `n_validators` bits.
 	assigned_validators: Bitfield,
 	approved: bool,
@@ -95,7 +128,7 @@ impl ApprovalEntry {
 		tranches: Vec<TrancheEntry>,
 		backing_group: GroupIndex,
 		our_assignment: Option<OurAssignment>,
-		our_approval_sig: Option<ValidatorSignature>,
+		our_approval_sig: Option<OurApproval>,
 		// `n_validators` bits.
 		assigned_validators: Bitfield,
 		approved: bool,
@@ -137,7 +170,7 @@ impl ApprovalEntry {
 	}
 
 	/// Import our local approval vote signature for this candidate.
-	pub fn import_approval_sig(&mut self, approval_sig: ValidatorSignature) {
+	pub fn import_approval_sig(&mut self, approval_sig: OurApproval) {
 		self.our_approval_sig = Some(approval_sig);
 	}
 
@@ -224,7 +257,7 @@ impl ApprovalEntry {
 	/// Get the assignment cert & approval signature.
 	///
 	/// The approval signature will only be `Some` if the assignment is too.
-	pub fn local_statements(&self) -> (Option<OurAssignment>, Option<ValidatorSignature>) {
+	pub fn local_statements(&self) -> (Option<OurAssignment>, Option<OurApproval>) {
 		let approval_sig = self.our_approval_sig.clone();
 		if let Some(our_assignment) = self.our_assignment.as_ref().filter(|a| a.triggered()) {
 			(Some(our_assignment.clone()), approval_sig)
@@ -359,7 +392,7 @@ pub struct BlockEntry {
 	// A list of assignments for which wea already distributed the assignment.
 	// We use this to ensure we don't distribute multiple core assignments twice as we track
 	// individual wakeups for each core.
-	pub distributed_assignments: Bitfield,
+	distributed_assignments: Bitfield,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -480,6 +513,24 @@ impl From<crate::approval_db::v2::BlockEntry> for BlockEntry {
 	}
 }
 
+impl From<crate::approval_db::v1::BlockEntry> for BlockEntry {
+	fn from(entry: crate::approval_db::v1::BlockEntry) -> Self {
+		BlockEntry {
+			block_hash: entry.block_hash,
+			parent_hash: entry.parent_hash,
+			block_number: entry.block_number,
+			session: entry.session,
+			slot: entry.slot,
+			relay_vrf_story: RelayVRFStory(entry.relay_vrf_story),
+			candidates: entry.candidates,
+			approved_bitfield: entry.approved_bitfield,
+			children: entry.children,
+			distributed_assignments: Default::default(),
+			candidates_pending_signature: Default::default(),
+		}
+	}
+}
+
 impl From<BlockEntry> for crate::approval_db::v2::BlockEntry {
 	fn from(entry: BlockEntry) -> Self {
 		Self {
@@ -536,31 +587,13 @@ impl From<crate::approval_db::v1::CandidateEntry> for CandidateEntry {
 	}
 }
 
-impl From<crate::approval_db::v1::BlockEntry> for BlockEntry {
-	fn from(block: crate::approval_db::v1::BlockEntry) -> Self {
-		Self {
-			block_hash: block.block_hash,
-			parent_hash: block.parent_hash,
-			block_number: block.block_number,
-			session: block.session,
-			slot: block.slot,
-			relay_vrf_story: RelayVRFStory(block.relay_vrf_story),
-			candidates: block.candidates,
-			approved_bitfield: block.approved_bitfield,
-			children: block.children,
-			candidates_pending_signature: Default::default(),
-			distributed_assignments: Default::default(),
-		}
-	}
-}
-
 impl From<crate::approval_db::v1::ApprovalEntry> for ApprovalEntry {
 	fn from(value: crate::approval_db::v1::ApprovalEntry) -> Self {
 		ApprovalEntry {
 			tranches: value.tranches.into_iter().map(|tranche| tranche.into()).collect(),
 			backing_group: value.backing_group,
 			our_assignment: value.our_assignment.map(|assignment| assignment.into()),
-			our_approval_sig: value.our_approval_sig,
+			our_approval_sig: value.our_approval_sig.map(Into::into),
 			assigned_validators: value.assignments,
 			approved: value.approved,
 		}

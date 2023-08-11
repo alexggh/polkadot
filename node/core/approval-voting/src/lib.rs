@@ -101,7 +101,7 @@ use crate::{
 	approval_db::v2::{Config as DatabaseConfig, DbBackend},
 	backend::{Backend, OverlayedBackend},
 	criteria::InvalidAssignmentReason,
-	persisted_entries::CandidateSigningContext,
+	persisted_entries::{CandidateSigningContext, OurApproval},
 };
 
 #[cfg(test)]
@@ -166,6 +166,7 @@ struct MetricsInner {
 	approvals_produced_total: prometheus::CounterVec<prometheus::U64>,
 	no_shows_total: prometheus::Counter<prometheus::U64>,
 	wakeups_triggered_total: prometheus::Counter<prometheus::U64>,
+	coalesced_approvals_buckets: prometheus::Histogram,
 	candidate_approval_time_ticks: prometheus::Histogram,
 	block_approval_time_ticks: prometheus::Histogram,
 	time_db_transaction: prometheus::Histogram,
@@ -187,6 +188,15 @@ impl Metrics {
 	fn on_assignment_produced(&self, tranche: DelayTranche) {
 		if let Some(metrics) = &self.0 {
 			metrics.assignments_produced.observe(tranche as f64);
+		}
+	}
+
+	fn on_approval_coalesce(&self, num_coalesced: u32) {
+		if let Some(metrics) = &self.0 {
+			// So we count how many candidates we covered with this approvals.
+			for _ in 0..num_coalesced {
+				metrics.coalesced_approvals_buckets.observe(num_coalesced as f64)
+			}
 		}
 	}
 
@@ -310,6 +320,15 @@ impl metrics::Metrics for Metrics {
 						"polkadot_parachain_approvals_candidate_approval_time_ticks",
 						"Number of ticks (500ms) to approve candidates.",
 					).buckets(vec![6.0, 12.0, 18.0, 24.0, 30.0, 36.0, 72.0, 100.0, 144.0]),
+				)?,
+				registry,
+			)?,
+			coalesced_approvals_buckets: prometheus::register(
+				prometheus::Histogram::with_opts(
+					prometheus::HistogramOpts::new(
+						"polkadot_parachain_approvals_coalesced_approvals_buckets",
+						"Number of coalesced approvals.",
+					).buckets(vec![1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5]),
 				)?,
 				registry,
 			)?,
@@ -1084,7 +1103,11 @@ async fn handle_actions<Context>(
 			Action::BecomeActive => {
 				*mode = Mode::Active;
 
-				let messages = distribution_messages_for_activation(overlayed_db, state)?;
+				let messages = distribution_messages_for_activation(
+					overlayed_db,
+					state,
+					delayed_approvals_timers,
+				)?;
 
 				ctx.send_messages(messages.into_iter()).await;
 			},
@@ -1143,6 +1166,7 @@ fn get_assignment_core_indices(
 fn distribution_messages_for_activation(
 	db: &OverlayedBackend<'_, impl Backend>,
 	state: &State,
+	delayed_approvals_timers: &mut DelayedApprovalTimer,
 ) -> SubsystemResult<Vec<ApprovalDistributionMessage>> {
 	let all_blocks: Vec<Hash> = db.load_all_blocks()?;
 
@@ -1181,7 +1205,7 @@ fn distribution_messages_for_activation(
 			slot: block_entry.slot(),
 			session: block_entry.session(),
 		});
-
+		let mut signatures_queued = HashSet::new();
 		for (i, (_, candidate_hash)) in block_entry.candidates().iter().enumerate() {
 			let _candidate_span =
 				distribution_message_span.child("candidate").with_candidate(*candidate_hash);
@@ -1209,6 +1233,15 @@ fn distribution_messages_for_activation(
 								&candidate_hash,
 								&block_entry,
 							) {
+								if !block_entry.candidates_pending_signature.is_empty() {
+									delayed_approvals_timers.maybe_arm_timer(
+										state.clock.tick_now(),
+										state.clock.as_ref(),
+										block_entry.block_hash(),
+										assignment.validator_index(),
+									)
+								}
+
 								match cores_to_candidate_indices(
 									&claimed_core_indices,
 									&block_entry,
@@ -1275,15 +1308,19 @@ fn distribution_messages_for_activation(
 										continue
 									},
 								}
-
-								messages.push(ApprovalDistributionMessage::DistributeApproval(
-									IndirectSignedApprovalVoteV2 {
-										block_hash,
-										candidate_indices: (i as CandidateIndex).into(),
-										validator: assignment.validator_index(),
-										signature: approval_sig,
-									},
-								));
+								let candidate_indices = approval_sig
+									.signed_candidates_indices
+									.unwrap_or((i as CandidateIndex).into());
+								if signatures_queued.insert(candidate_indices.clone()) {
+									messages.push(ApprovalDistributionMessage::DistributeApproval(
+										IndirectSignedApprovalVoteV2 {
+											block_hash,
+											candidate_indices,
+											validator: assignment.validator_index(),
+											signature: approval_sig.signature,
+										},
+									))
+								};
 							} else {
 								gum::warn!(
 									target: LOG_TARGET,
@@ -1986,9 +2023,8 @@ where
 
 	let n_cores = session_info.n_cores as usize;
 
-	// Early check the candidate bitfield and core bitfields lengths <= `n_cores`.
-	// `approval-distribution` already checks for core and claimed candidate bitfields
-	// to be equal in size. A check for claimed candidate bitfields should be enough here.
+	// Early check the candidate bitfield and core bitfields lengths < `n_cores`.
+	// Core bitfield length is checked later in `check_assignment_cert`.
 	if candidate_indices.len() > n_cores {
 		gum::debug!(
 			target: LOG_TARGET,
@@ -3146,7 +3182,7 @@ async fn maybe_create_signature<Context>(
 		None => {
 			// not a cause for alarm - just lost a race with pruning, most likely.
 			metrics.on_approval_stale();
-			gum::trace!(
+			gum::info!(
 				target: LOG_TARGET,
 				"Could not find block that needs signature {:}", block_hash
 			);
@@ -3222,7 +3258,7 @@ async fn maybe_create_signature<Context>(
 	let signature = match sign_approval(
 		&state.keystore,
 		&validator_pubkey,
-		candidate_hashes,
+		candidate_hashes.clone(),
 		block_entry.session(),
 	) {
 		Some(sig) => sig,
@@ -3244,19 +3280,27 @@ async fn maybe_create_signature<Context>(
 		.values()
 		.map(|unsigned_approval| db.load_candidate_entry(&unsigned_approval.candidate_hash))
 		.collect::<SubsystemResult<Vec<Option<CandidateEntry>>>>()?;
-
+	let candidate_indexes: Vec<CandidateIndex> =
+		block_entry.candidates_pending_signature.keys().map(|val| *val).collect();
 	for candidate_entry in candidate_entries {
 		let mut candidate_entry = candidate_entry
 			.expect("Candidate was scheduled to be signed entry in db should exist; qed");
 		let approval_entry = candidate_entry
 			.approval_entry_mut(&block_entry.block_hash())
 			.expect("Candidate was scheduled to be signed entry in db should exist; qed");
-		approval_entry.import_approval_sig(signature.clone());
+		approval_entry.import_approval_sig(OurApproval {
+			signature: signature.clone(),
+			signed_candidates_indices: Some(
+				candidate_indexes
+					.clone()
+					.try_into()
+					.expect("Fails only of array empty, it can't be, qed"),
+			),
+		});
 		db.write_candidate_entry(candidate_entry);
 	}
 
-	let candidate_indexes: Vec<CandidateIndex> =
-		block_entry.candidates_pending_signature.keys().map(|val| *val).collect();
+	metrics.on_approval_coalesce(candidate_indexes.len() as u32);
 
 	metrics.on_approval_produced();
 
