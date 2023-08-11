@@ -3393,7 +3393,7 @@ async fn get_approval_voting_params_or_default<Context>(
 	// 	},
 	// }
 
-	ApprovalVotingParams { max_approval_coalesce_count: 1, max_approval_coalesce_wait_ticks: 2 }
+	ApprovalVotingParams { max_approval_coalesce_count: 6, max_approval_coalesce_wait_ticks: 2 }
 }
 
 fn compute_delayed_approval_sending_tick(
